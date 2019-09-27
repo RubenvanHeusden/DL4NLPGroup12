@@ -1,10 +1,10 @@
 import tqdm
 import torch
 import numpy as np
-import torch.nn.functional as F
+# import torch.nn.functional as F
 from torch import nn
 import torch.optim as optim
-import torchtext
+# import torchtext
 from torchtext.data import Field
 from torchtext.data import TabularDataset
 from torchtext.data import Iterator, BucketIterator
@@ -13,17 +13,19 @@ from models.simplelstm import SimpleLSTM
 from sklearn.metrics import f1_score, accuracy_score, recall_score, precision_score
 from nltk.tokenize import  word_tokenize
 
+torch.manual_seed(42)
+
 num_classes = 90
-batch_size = 64
+batch_size = 256
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-num_epochs = 1
+num_epochs = 50
 
 # We read in our stop words file into a list
 def read_stop_words(f_path):
     with open(f_path, 'r') as f:
         return f.read().split("\n")
 
-stopwords = read_stop_words("../reuters/stopwords")
+stopwords = read_stop_words("reuters/stopwords")
 # Specifies what we want to do with our document column in the
 # csv. Here we want to build a vocabulary from the text, remove stop words
 # and specify a custom tokenizer (the nltk one in this case)
@@ -88,26 +90,27 @@ test_dl = BatchWrapper(test_iter, "document", class_names)
 
 
 # Specific model that we use for the training procedure
-lstm_model = SimpleLSTM(hidden_dim=300, vocab_size=len(text.vocab),
-                        embedding_dim=300, weight_matrix=text.vocab.vectors)
-
+lstm_model = SimpleLSTM(hidden_dim=256, vocab_size=len(text.vocab),
+                        embedding_dim=300, weight_matrix=text.vocab.vectors, dvc=device, tr_embed=True)
+lstm_model = lstm_model.to(device)
 
 
 def train(train_data, val_data, test_data,
           model=None,
           num_epochs=5, lr=1e-2, logging=False):
 
-    opt = optim.Adam(model.parameters(), lr=1e-2)
-    loss_func = nn.BCEWithLogitsLoss()
+    opt = optim.Adam(model.parameters(), lr=0.001)  # 1e-2  +- batch_size/64*0.01
+    loss_func = nn.BCEWithLogitsLoss(reduction="none")  # Experimental: weigh loss with class occurrence
 
     for epoch in range(1, num_epochs + 1):
         running_loss = 0.0
-        running_corrects = 0
         model.train()
+        print("Running Epoch {}".format(epoch))
         for x, y in tqdm.tqdm(train_data):
             opt.zero_grad()
             preds = model(x)
             loss = loss_func(preds, y)
+            loss = (loss*(1-y.sum(0)/y.sum())).mean()
             loss.backward()
             opt.step()
 
@@ -119,11 +122,12 @@ def train(train_data, val_data, test_data,
         model.eval()
         for x, y in val_data:
             preds = model(x)
-            loss = loss_func(preds, y)
+            loss = loss_func(preds, y).mean()
             val_loss += loss.item() * x.size(0)
 
         val_loss /= len(val)
         print('Epoch: {}, Training Loss: {:.4f}, Validation Loss: {:.4f}'.format(epoch, epoch_loss, val_loss))
+        print()
 
     test_preds = []
     targets = []
@@ -133,9 +137,9 @@ def train(train_data, val_data, test_data,
     for x, y in tqdm.tqdm(test_data):
         preds = model(x)
         preds = sigmoid(preds)>0.5
-        preds = preds.data.numpy()
+        preds = preds.cpu().data.numpy()
         test_preds.append(preds)
-        targets.append(y.data.numpy())
+        targets.append(y.cpu().data.numpy())
 
     targets = np.concatenate(targets, axis=0)
     preds = np.concatenate(test_preds, axis=0)

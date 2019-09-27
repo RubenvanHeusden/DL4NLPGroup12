@@ -9,12 +9,14 @@ from torchtext.data import Field
 from torchtext.data import TabularDataset
 from torchtext.data import Iterator, BucketIterator
 from batchwrapper import BatchWrapper
-from simplelstm import SimpleLSTM
+from models.simplelstm import SimpleLSTM
 from sklearn.metrics import f1_score, accuracy_score, recall_score, precision_score
 from nltk.tokenize import  word_tokenize
 
 num_classes = 90
 batch_size = 64
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+num_epochs = 1
 
 # We read in our stop words file into a list
 def read_stop_words(f_path):
@@ -64,7 +66,7 @@ text.build_vocab(trn,vectors="glove.6B.300d")
 train_iter, val_iter = BucketIterator.splits(
  (trn, val),
  batch_sizes=(batch_size, batch_size),
- device=torch.cuda.is_available(),
+ device=device,
  sort_key=lambda x: len(x.document),
  sort_within_batch=True,
  repeat=False
@@ -73,7 +75,7 @@ train_iter, val_iter = BucketIterator.splits(
 # Make a seperate iterator for the test data in which we dont sort
 # depending on length but just keep it as it is
 test_iter = Iterator(tst, batch_size=batch_size,
-                     device=torch.cuda.is_available(),
+                     device=device,
                      sort=False,
                      sort_within_batch=False,
                      repeat=False)
@@ -89,7 +91,7 @@ test_dl = BatchWrapper(test_iter, "document", class_names)
 lstm_model = SimpleLSTM(hidden_dim=300, vocab_size=len(text.vocab),
                         embedding_dim=300, weight_matrix=text.vocab.vectors)
 
-num_epochs = 1
+
 
 def train(train_data, val_data, test_data,
           model=None,
@@ -144,5 +146,5 @@ def train(train_data, val_data, test_data,
     print(accuracy_score(targets,preds))
 
 train(train_data=train_dl, val_data=valid_dl,
-      test_data=test_iter,
+      test_data=test_dl,
       model=lstm_model,num_epochs=num_epochs)

@@ -33,4 +33,4 @@ class SimpleCNN(nn.Module):
         padded_x = self.dropout(padded_x)
         padded_x = self.l1(padded_x.view(padded_x.size(0), -1))
         padded_x = self.l2(padded_x)
-
+        return padded_x

@@ -13,14 +13,15 @@ change '<python install folder>\Lib\site-packages\torchtext\utils.py' line 130 '
 Usage: 'main.py -model -batch_size -n_epochs -use_cuda -hidden_dim'
 ('main.py -h' for an overview of the arguments)
 
-**information about pretrained embeddings**
+We use the GLoVe pretrained embeddings with 300 dimensions to convert the words of each document into latent space.
 
+**Used models:**
 # (Simple)LSTM
 Uses a vanilla LSTM model to process each document.
 
 # BiLSTM
 
 # (Simple)CNN
-Uses a vanilla CNN model to process each document. Here, each document is padded to a fixed size.
+Uses a vanilla CNN model to process each document. Here, each document is padded or truncated to a fixed size.
 
 # KimCNN

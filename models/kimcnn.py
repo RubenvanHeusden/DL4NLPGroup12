@@ -1,12 +1,12 @@
 import torch
 import torch.nn as nn
 class KimCNN(nn.Module):
-    def __init__(self, embedding_dim, vocab_size, weight_matrix, max_size,
+    def __init__(self, embedding_dim, vocab_size, embed_matrix, max_size,
                  dvc=None):
         super(KimCNN, self).__init__()
         # Here we will implement the model from Kims paper
         self.embeddings = nn.Embedding(vocab_size, embedding_dim)
-        self.embeddings.load_state_dict({'weight':weight_matrix})
+        self.embeddings.load_state_dict({'weight':embed_matrix})
         self.embedding_dim = embedding_dim
         self.max_size = max_size
         self.num_output_channels = 1
@@ -38,7 +38,7 @@ class KimCNN(nn.Module):
             nn.MaxPool2d(4, 4),
             nn.ReLU(inplace=False)
         )
-        self.l1 = nn.Linear(662*74*self.num_output_channels, 512)
+        self.l1 = nn.Linear(372*74*self.num_output_channels, 512)
         self.l2 = nn.Linear(512, 90)
         self.device = dvc
 
@@ -48,6 +48,8 @@ class KimCNN(nn.Module):
         padded_x = torch.zeros((x.shape[0], self.max_size, self.embedding_dim)).to(self.device)
         # here we could experiment with cutting the size of the padded
         # input to make the convolutions computationally managable
+        s = min(x.shape[2]-1, self.max_size)
+        x = x[:, :, :s, :]
         padded_x[:, :x.shape[2], :] = x.squeeze()
         padded_x = padded_x.unsqueeze(1)
         kernel_outputs.append(self.first_pass(padded_x))

@@ -2,22 +2,22 @@ import torch
 import torch.nn as nn
 
 class SimpleCNN(nn.Module):
-    def __init__(self, embedding_dim, vocab_size, weight_matrix, max_size,
+    def __init__(self, embedding_dim, vocab_size, embed_matrix, max_size,
                  dvc=None):
         super(SimpleCNN, self).__init__()
         self.embeddings = nn.Embedding(vocab_size, embedding_dim)
-        self.embeddings.load_state_dict({'weight':weight_matrix})
+        self.embeddings.load_state_dict({'weight':embed_matrix})
         self.embedding_dim = embedding_dim
         self.max_size = max_size
-        self.num_output_channels = 10
+        self.num_output_channels = 1
         self.dropout = nn.Dropout(0.5)
         self.conv1 = nn.Conv2d(in_channels=1,
                                out_channels=self.num_output_channels,
                                kernel_size=5,
                                stride=1)
-        self.pool = nn.MaxPool2d(4, 4)
+        self.pool = nn.MaxPool2d(2, 2)
         self.relu = nn.ReLU()
-        self.l1 = nn.Linear(220*74*self.num_output_channels, 512)
+        self.l1 = nn.Linear(248*148*self.num_output_channels, 512)
         self.l2 = nn.Linear(512, 90)
         self.device = dvc
 
@@ -26,7 +26,10 @@ class SimpleCNN(nn.Module):
         padded_x = torch.zeros((x.shape[0], self.max_size, self.embedding_dim)).to(self.device)
         # here we could experiment with cutting the size of the padded
         # input to make the convolutions computationally managable
+        s = min(x.shape[2]-1, self.max_size)
+        x = x[:, :, :s, :]
         padded_x[:, :x.shape[2], :] = x.squeeze()
+        padded_x = padded_x[:, :self.max_size, :]
         padded_x = self.conv1(padded_x.unsqueeze(1))
         padded_x = self.relu(padded_x).squeeze()
         padded_x = self.pool(padded_x)

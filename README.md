@@ -10,8 +10,9 @@ There seems to be a small bug in the 'torchtext' module:
 change '<python install folder>\Lib\site-packages\torchtext\utils.py' line 130 'csv.field_size_limit(sys.maxsize)' to 'csv.field_size_limit(maxInt)'
 
 
-Usage: 'main.py -model -batch_size -n_epochs -use_cuda -hidden_dim'
+Usage: 'main.py -model -batch_size -n_epochs -use_cuda -hidden_dim' _(Only '-model' argument is required, e.g. 'main.py -model lstm')_
 ('main.py -h' for an overview of the arguments)
+_usage for dropoutlstm_
 
 We use the GLoVe pretrained embeddings with 300 dimensions to convert the words of each document into latent space.
 
@@ -20,6 +21,8 @@ We use the GLoVe pretrained embeddings with 300 dimensions to convert the words 
 Uses a vanilla LSTM model to process each document.
 
 # BiLSTM
+
+# DropoutLSTM
 
 # (Simple)CNN
 Uses a vanilla CNN model to process each document. Here, each document is padded or truncated to a fixed size.

@@ -30,7 +30,7 @@ def read_stop_words(f_path):
     with open(f_path, 'r') as f:
         return f.read().split("\n")
 
-stopwords = read_stop_words("reuters/stopwords")
+stopwords = read_stop_words("data/stopwords")
 # Specifies what we want to do with our document column in the
 # csv. Here we want to build a vocabulary from the text, remove stop words
 # and specify a custom tokenizer (the nltk one in this case)

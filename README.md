@@ -10,9 +10,13 @@ There seems to be a small bug in the 'torchtext' module:
 change '<python install folder>\Lib\site-packages\torchtext\utils.py' line 130 'csv.field_size_limit(sys.maxsize)' to 'csv.field_size_limit(maxInt)'
 
 
-Usage: 'main.py -model -batch_size -n_epochs -use_cuda -hidden_dim' _(Only '-model' argument is required, e.g. 'main.py -model lstm')_
-('main.py -h' for an overview of the arguments)
-_usage for dropoutlstm_
+Usage: 'python main.py -model -batch_size -n_epochs -use_cuda -hidden_dim'
+
+_(Only '-model' argument is required, e.g. 'python main.py -model lstm')_
+
+Type 'main.py -h' for an overview of the arguments
+
+Usage for DropoutLSTM: 'python dropout_training.py'
 
 We use the GLoVe pretrained embeddings with 300 dimensions to convert the words of each document into latent space.
 

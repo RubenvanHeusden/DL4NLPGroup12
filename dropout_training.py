@@ -21,16 +21,16 @@ from nltk.tokenize import  word_tokenize
 torch.manual_seed(42)
 
 num_classes = 90
-batch_size = 16
+batch_size = 256
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-num_epochs = 1
+num_epochs = 50
 
 # We read in our stop words file into a list
 def read_stop_words(f_path):
     with open(f_path, 'r') as f:
         return f.read().split("\n")
 
-stopwords = read_stop_words("../reuters/stopwords")
+stopwords = read_stop_words("reuters/stopwords")
 # Specifies what we want to do with our document column in the
 # csv. Here we want to build a vocabulary from the text, remove stop words
 # and specify a custom tokenizer (the nltk one in this case)
@@ -97,7 +97,7 @@ test_dl = BatchWrapper(test_iter, "document", class_names)
 # Specific model that we use for the training procedure
 lstm_model = DropoutLSTM(hidden_dim=256, vocab_size=len(text.vocab),
                         embedding_dim=300, weight_matrix=text.vocab.vectors,
-                    dvc=device, tr_embed=True)
+                    dvc=device, tr_embed=False)
 lstm_model = lstm_model.to(device)
 
 # max_length = max([len(trn[x].document) for x in range(len(trn))])
@@ -136,7 +136,7 @@ def train(train_data, val_data, test_data,
     # maybe make this model lstm
     opt = optim.Adam(model.parameters(), lr=0.001,
                      weight_decay=1e-5)  # 1e-2  +- batch_size/64*0.01
-    loss_func = nn.BCEWithLogitsLoss(reduction="none")  # Experimental: weigh loss with class occurrence
+    loss_func = nn.BCEWithLogitsLoss()  # Experimental: weigh loss with class occurrence
 
     for epoch in range(1, num_epochs + 1):
         running_loss = 0.0
@@ -146,7 +146,6 @@ def train(train_data, val_data, test_data,
             opt.zero_grad()
             preds = model(x)
             loss = loss_func(preds, y)
-            loss = (loss*(1-y.sum(0)/y.sum())).mean()
             loss.backward()
             opt.step()
 
@@ -165,25 +164,59 @@ def train(train_data, val_data, test_data,
         print('Epoch: {}, Training Loss: {:.4f}, Validation Loss: {:.4f}'.format(epoch, epoch_loss, val_loss))
         print()
 
+
     test_preds = []
     targets = []
+
+    one_class_preds = []
+    one_class_targets = []
+
+    multi_class_preds = []
+    multi_class_targets = []
 
     model.eval()
     sigmoid = nn.Sigmoid()
     for x, y in tqdm.tqdm(test_data):
+        #preds = model(x[:max_length, :])
         preds = model(x)
         preds = sigmoid(preds)>0.5
         preds = preds.cpu().data.numpy()
         test_preds.append(preds)
-        targets.append(y.cpu().data.numpy())
+        target = y.cpu().data.numpy()
+        targets.append(target)
+
+        multi_cls_mask = target.sum(1) > 1
+        single_cls_mask = 1-multi_cls_mask
+
+        one_class_preds.append(preds[single_cls_mask])
+        one_class_targets.append(target[single_cls_mask])
+
+        multi_class_preds.append(preds[multi_cls_mask])
+        multi_class_targets.append(target[multi_cls_mask])
 
     targets = np.concatenate(targets, axis=0)
     preds = np.concatenate(test_preds, axis=0)
 
-    print(precision_score(targets,preds , average="micro"))
-    print(recall_score(targets,preds , average="micro"))
-    print(f1_score(targets,preds , average="micro"))
-    print(accuracy_score(targets,preds))
+    o_targets = np.concatenate(one_class_targets, axis=0)
+    o_preds = np.concatenate(one_class_preds, axis=0)
+
+    m_targets = np.concatenate(multi_class_targets, axis=0)
+    m_preds = np.concatenate(multi_class_preds, axis=0)
+    print(o_preds.sum(), o_preds.shape)
+    print("Micro Precision score %f"%precision_score(targets, preds , average="micro"))
+    print("Micro Recall score %f"%recall_score(targets, preds , average="micro"))
+    print("Micro F1 score %f"%f1_score(targets, preds , average="micro"))
+    print("Accuracy score %f"%accuracy_score(targets, preds))
+
+    print("Micro Precision score single class %f"%precision_score(o_targets, o_preds, average="micro"))
+    print("Micro Recall score single class %f"%recall_score(o_targets, o_preds , average="micro"))
+    print("Micro F1 score single class %f"%f1_score(o_targets, o_preds, average="micro"))
+    print("Accuracy score single class %f"%accuracy_score(o_targets, o_preds))
+
+    print("Micro Precision score multi class %f"%precision_score(m_targets, m_preds, average="micro"))
+    print("Micro Recall score multi class %f"%recall_score(m_targets, m_preds , average="micro"))
+    print("Micro F1 score multi class %f"%f1_score(m_targets, m_preds, average="micro"))
+    print("Accuracy score multi class %f"%accuracy_score(m_targets, m_preds))
 
 train(train_data=train_dl, val_data=valid_dl,
       test_data=test_dl,

@@ -3,15 +3,15 @@ import torch.nn as nn
 
 class BiLSTM(nn.Module):
     def __init__(self, hidden_dim, vocab_size, embedding_dim=300, batch_size=64,
-                 weight_matrix=None, dvc=None, tr_embed=False):
+                 embed_matrix=None, dvc=None, tr_embed=False):
         super(BiLSTM, self).__init__()
         self.embedding = nn.Embedding(vocab_size, embedding_dim)
-        self.embedding.load_state_dict({'weight':weight_matrix})
+        self.embedding.load_state_dict({'weight':embed_matrix})
         self.embedding.weight.requires_grad = tr_embed
         self.lstm = nn.LSTM(embedding_dim, hidden_dim,bidirectional=True)
         self.output_layer = nn.Linear(2*hidden_dim, 90)
         self.hidden_dim = hidden_dim
-        self.drop = nn.Dropout(0.3)
+        self.drop = nn.Dropout(0.4)
         self.device = dvc
 
     def forward(self, x):

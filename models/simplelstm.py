@@ -2,10 +2,10 @@ import torch
 from torch import nn
 
 class SimpleLSTM(nn.Module):
-    def __init__(self, hidden_dim, vocab_size, embedding_dim=300,batch_size=64,weight_matrix=None,dvc=None,tr_embed=False):
+    def __init__(self, hidden_dim, vocab_size, embedding_dim=300,batch_size=64,embed_matrix=None,dvc=None,tr_embed=False):
         super(SimpleLSTM, self).__init__()
         self.embedding = nn.Embedding(vocab_size, embedding_dim)
-        self.embedding.load_state_dict({'weight':weight_matrix})
+        self.embedding.load_state_dict({'weight':embed_matrix})
         self.embedding.weight.requires_grad = tr_embed
         self.lstm = nn.LSTM(embedding_dim, hidden_dim)
         self.output_layer = nn.Linear(hidden_dim, 90)
